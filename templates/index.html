@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Email Recognizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #f6f8fc;
+    --white:     #ffffff;
+    --sidebar:   #ffffff;
+    --border:    #e0e0e0;
+    --hover:     #f2f6fc;
+    --selected:  #d3e3fd;
+    --text:      #202124;
+    --muted:     #5f6368;
+    --accent:    #1a73e8;
+    --accent2:   #34a853;
+    --unread-bg: #ffffff;
+    --read-bg:   #f2f2f2;
+    --shadow:    0 1px 3px rgba(0,0,0,.12);
+  }
+
+  body {
+    font-family: 'Google Sans', 'Roboto', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Login Screen ─────────────────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+
+  .login-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 420px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.25);
+    text-align: center;
+  }
+
+  .login-logo {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+
+  .login-card h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .login-card p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .login-card input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .login-card input:focus { border-color: var(--accent); }
+
+  .login-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background .2s, transform .1s;
+  }
+
+  .login-btn:hover  { background: #1557b0; }
+  .login-btn:active { transform: scale(.98); }
+
+  .login-error {
+    color: #d93025;
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .login-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+
+  .login-note a { color: var(--accent); text-decoration: none; }
+
+  /* ── Top Bar ──────────────────────────────────────────────── */
+  #topbar {
+    display: none;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    height: 64px;
+    flex-shrink: 0;
+  }
+
+  .topbar-logo { font-size: 28px; }
+
+  .topbar-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-right: 8px;
+  }
+
+  #search-bar {
+    flex: 1;
+    max-width: 640px;
+    position: relative;
+  }
+
+  #search-input {
+    width: 100%;
+    padding: 10px 16px 10px 44px;
+    background: var(--bg);
+    border: none;
+    border-radius: 24px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: background .2s, box-shadow .2s;
+  }
+
+  #search-input:focus {
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 12px;
+    margin-left: auto;
+  }
+
+  .user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+    cursor: pointer;
+  }
+
+  #progress-bar-wrap {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  #progress-bar {
+    width: 140px; height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width .3s;
+    border-radius: 3px;
+  }
+
+  /* ── Main Layout ──────────────────────────────────────────── */
+  #app { display: none; flex: 1; overflow: hidden; }
+
+  .app-body {
+    display: flex;
+    height: 100%;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────────────── */
+  #sidebar {
+    width: 256px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    padding: 8px 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+  }
+
+  .compose-btn {
+    display: flex; align-items: center; gap: 12px;
+    margin: 8px 16px 16px;
+    padding: 16px 24px;
+    background: #c2e7ff;
+    border-radius: 16px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: box-shadow .2s;
+    border: none; font-family: inherit;
+    color: var(--text);
+  }
+
+  .compose-btn:hover { box-shadow: var(--shadow); }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 6px 16px 6px 26px;
+    border-radius: 0 16px 16px 0;
+    margin-right: 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: background .15s;
+    position: relative;
+  }
+
+  .nav-item:hover    { background: var(--hover); }
+  .nav-item.active   { background: #d3e3fd; font-weight: 700; }
+  .nav-item .icon    { font-size: 20px; width: 24px; text-align: center; }
+  .nav-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .sidebar-section {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 16px 26px 6px;
+  }
+
+  .cat-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Email List ───────────────────────────────────────────── */
+  #email-list-pane {
+    width: 380px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .list-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .list-header h2 {
+    font-size: 16px; font-weight: 700;
+  }
+
+  .list-header .count {
+    font-size: 13px; color: var(--muted);
+    margin-left: auto;
+  }
+
+  #email-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .email-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s;
+    background: var(--unread-bg);
+    gap: 12px;
+    position: relative;
+  }
+
+  .email-item:hover    { background: var(--hover); }
+  .email-item.selected { background: var(--selected); }
+  .email-item.read     { background: var(--read-bg); }
+
+  .email-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #fff;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .email-meta { flex: 1; min-width: 0; }
+
+  .email-sender {
+    font-size: 14px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .email-item.read .email-sender { font-weight: 400; }
+
+  .email-subject {
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .email-item.read .email-subject { font-weight: 400; color: var(--muted); }
+
+  .email-snippet {
+    font-size: 12px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .email-right {
+    display: flex; flex-direction: column;
+    align-items: flex-end; gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .email-date {
+    font-size: 11px; color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .category-badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Email Detail ─────────────────────────────────────────── */
+  #email-detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 40px;
+    background: var(--white);
+  }
+
+  #detail-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    gap: 16px;
+  }
+
+  #detail-placeholder .big-icon { font-size: 80px; opacity: .3; }
+  #detail-placeholder p { font-size: 16px; }
+
+  #detail-content { display: none; }
+
+  .detail-subject {
+    font-size: 26px; font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+
+  .detail-meta {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; color: #fff;
+    flex-shrink: 0;
+  }
+
+  .detail-sender-info { flex: 1; }
+
+  .detail-sender-name {
+    font-size: 15px; font-weight: 700;
+  }
+
+  .detail-sender-email {
+    font-size: 13px; color: var(--muted);
+  }
+
+  .detail-date {
+    font-size: 13px; color: var(--muted);
+  }
+
+  .detail-category-badge {
+    font-size: 12px; font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 12px;
+  }
+
+  .detail-body {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-line;
+    word-break: break-word;
+  }
+
+  /* ── Scheduler Modal ─────────────────────────────────────── */
+  #scheduler-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #scheduler-modal.open { display: flex; }
+
+  .modal-card {
+    background: #fff;
+    border-radius: 16px;
+    width: 560px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,.25);
+  }
+
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .modal-header h2 { font-size: 17px; font-weight: 700; }
+
+  .modal-close {
+    background: none; border: none; font-size: 20px;
+    cursor: pointer; color: var(--muted); padding: 4px;
+  }
+
+  .modal-body { padding: 20px 24px; }
+
+  .modal-section { margin-bottom: 20px; }
+
+  .modal-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); margin-bottom: 8px;
+  }
+
+  .attendee-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+
+  .attendee-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 12px;
+    background: #e8f0fe; color: var(--accent);
+    border-radius: 16px; font-size: 12px; font-weight: 600;
+  }
+
+  .attendee-chip .remove {
+    cursor: pointer; font-size: 14px; opacity: .6;
+  }
+  .attendee-chip .remove:hover { opacity: 1; }
+
+  .add-attendee-row {
+    display: flex; gap: 8px;
+  }
+
+  .add-attendee-row input {
+    flex: 1; padding: 8px 12px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+
+  .add-attendee-row input:focus { border-color: var(--accent); }
+
+  .add-btn {
+    padding: 8px 14px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: 13px;
+    cursor: pointer; font-family: inherit; font-weight: 600;
+  }
+
+  .duration-select {
+    padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 13px; font-family: inherit;
+    outline: none; background: #fff;
+  }
+
+  .duration-select:focus { border-color: var(--accent); }
+
+  .slot-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .slot-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: all .15s;
+  }
+
+  .slot-item:hover      { border-color: var(--accent); background: #f0f6ff; }
+  .slot-item.preferred  { border-color: #1e8e3e; background: #f0faf2; }
+  .slot-item.selected-slot { border-color: var(--accent); background: #e8f0fe; }
+
+  .slot-time { font-size: 14px; font-weight: 600; }
+  .slot-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .slot-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 8px; background: #e6f4ea; color: #1e8e3e;
+  }
+
+  .confirm-btn {
+    width: 100%; padding: 13px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    margin-top: 16px; transition: background .15s;
+    display: none;
+  }
+
+  .confirm-btn:hover { background: #1557b0; }
+
+  .modal-loading {
+    text-align: center; padding: 32px;
+    color: var(--muted); font-size: 14px;
+  }
+
+  .modal-success {
+    text-align: center; padding: 24px;
+  }
+
+  .modal-success .success-icon { font-size: 48px; margin-bottom: 12px; }
+  .modal-success h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .modal-success p  { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  .modal-success a  { color: var(--accent); font-weight: 600; }
+
+  /* ── DateTime Card ────────────────────────────────────────── */
+  .datetime-card {
+    margin-top: 20px;
+    border: 1.5px solid #e8f0fe;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .datetime-card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: #e8f0fe;
+    font-size: 13px; font-weight: 700;
+    color: var(--accent);
+  }
+
+  .datetime-card-body { padding: 14px 16px; }
+
+  .dt-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .dt-row:last-child { border-bottom: none; }
+
+  .dt-label {
+    min-width: 90px;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding-top: 2px;
+  }
+
+  .dt-value { color: var(--text); flex: 1; line-height: 1.5; }
+
+  .dt-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+    margin: 2px 3px 2px 0;
+    background: #e8f0fe;
+    color: var(--accent);
+  }
+
+  .dt-tag.date  { background: #e6f4ea; color: #1e8e3e; }
+  .dt-tag.time  { background: #fce8e6; color: #c5221f; }
+  .dt-tag.rel   { background: #fef7e0; color: #b06000; }
+  .dt-tag.range { background: #f3e8fd; color: #7b1fa2; }
+
+  .intent-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 12px;
+    border-radius: 10px;
+    font-size: 12px; font-weight: 600;
+    background: #e8f0fe; color: var(--accent);
+  }
+
+  .gcal-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 12px;
+    padding: 9px 18px;
+    background: var(--accent);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background .15s;
+  }
+
+  .gcal-btn:hover { background: #1557b0; }
+
+  .gcal-btn.secondary {
+    background: #fff;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    margin-left: 8px;
+  }
+
+  .gcal-btn.secondary:hover { background: var(--hover); }
+
+  .dt-loading {
+    color: var(--muted); font-size: 13px;
+    font-style: italic; padding: 8px 0;
+  }
+
+  /* 🗓 badge on email list items */
+  .cal-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #1e8e3e;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── Media Panel ──────────────────────────────────────────── */
+  .media-section {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  .media-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .attachment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .attachment-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .15s, box-shadow .15s;
+    max-width: 220px;
+  }
+
+  .attachment-chip:hover {
+    background: var(--hover);
+    box-shadow: var(--shadow);
+  }
+
+  .attachment-icon { font-size: 20px; flex-shrink: 0; }
+
+  .attachment-info { min-width: 0; }
+
+  .attachment-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+
+  .attachment-size { font-size: 11px; color: var(--muted); }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .image-thumb-wrap {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    aspect-ratio: 4/3;
+    background: var(--bg);
+  }
+
+  .image-thumb-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .2s;
+  }
+
+  .image-thumb-wrap:hover img { transform: scale(1.04); }
+
+  .image-thumb-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity .2s;
+    gap: 8px;
+  }
+
+  .image-thumb-wrap:hover .image-thumb-overlay { opacity: 1; }
+
+  .img-btn {
+    background: rgba(255,255,255,.9);
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .img-btn:hover { background: #fff; }
+
+  /* Gemini analysis result */
+  .gemini-analysis {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #e8f0fe;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    border-left: 3px solid var(--accent);
+  }
+
+  .gemini-analysis-loading {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  /* Image lightbox */
+  #lightbox {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.85);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #lightbox.open { display: flex; }
+
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 80vh;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  #lightbox-close {
+    position: absolute; top: 20px; right: 24px;
+    background: rgba(255,255,255,.15);
+    border: none; border-radius: 50%;
+    width: 40px; height: 40px;
+    font-size: 20px; color: #fff;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+  }
+
+  #lightbox-analyze {
+    background: var(--accent);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  #lightbox-result {
+    max-width: 600px; text-align: center;
+    color: #fff; font-size: 13px; line-height: 1.6;
+    background: rgba(255,255,255,.1);
+    padding: 12px 16px; border-radius: 8px;
+    display: none;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    margin: 40px auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scrollbar ────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 3px; }
+
+  /* ── Responsive ───────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    #sidebar { display: none; }
+    #email-list-pane { width: 100%; border: none; }
+    #email-detail { display: none; }
+    #email-detail.mobile-show { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ SCHEDULER MODAL ═══════════════════════════════════════ -->
+<div id="scheduler-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>🗓 Schedule Meeting</h2>
+      <button class="modal-close" onclick="closeScheduler()">✕</button>
+    </div>
+    <div class="modal-body" id="scheduler-body">
+      <div class="modal-loading">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LIGHTBOX ═══════════════════════════════════════════════ -->
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt=""/>
+  <button id="lightbox-analyze" onclick="analyzeCurrentImage()">🤖 Analyze with Gemini</button>
+  <div id="lightbox-result"></div>
+</div>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🤖</div>
+    <h1>AI Email Recognizer</h1>
+    <p>Sign in to see your inbox with AI-powered labels</p>
+
+    <input type="email"    id="login-email"    placeholder="Gmail address" autocomplete="email"/>
+    <input type="password" id="login-password" placeholder="App Password (16 chars)" autocomplete="current-password"/>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+
+    <div class="login-error" id="login-error"></div>
+
+    <p class="login-note">
+      ⚠️ Use a <a href="https://myaccount.google.com/apppasswords" target="_blank">Gmail App Password</a>,
+      not your regular password.<br/>
+      2-Step Verification must be enabled on your Google account.
+    </p>
+  </div>
+</div>
+
+<!-- ══ TOP BAR ═══════════════════════════════════════════════ -->
+<div id="topbar">
+  <span class="topbar-logo">📧</span>
+  <span class="topbar-title">AI Mail</span>
+
+  <div id="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search emails..." oninput="onSearch(this.value)"/>
+  </div>
+
+  <div class="topbar-right">
+    <div id="progress-bar-wrap">
+      <span id="progress-text">Classifying...</span>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+    <div class="user-avatar" id="user-avatar">U</div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══════════════════════════════════════════════ -->
+<div id="app">
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <button class="compose-btn">✏️ &nbsp;Compose</button>
+
+      <div class="nav-item active" onclick="showAll()">
+        <span class="icon">📥</span> Inbox
+        <span class="nav-count" id="inbox-count"></span>
+      </div>
+      <div class="nav-item" onclick="showAll()">
+        <span class="icon">⭐</span> Starred
+      </div>
+      <div class="nav-item" onclick="showAll()">
+        <span class="icon">📤</span> Sent
+      </div>
+      <div class="nav-item" onclick="showAll()">
+        <span class="icon">🗑️</span> Trash
+      </div>
+
+      <div class="sidebar-section">AI Categories</div>
+      <div id="category-nav"></div>
+    </div>
+
+    <!-- Email List -->
+    <div id="email-list-pane">
+      <div class="list-header">
+        <h2 id="list-title">Inbox</h2>
+        <span class="count" id="list-count"></span>
+      </div>
+      <div id="email-list">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- Email Detail -->
+    <div id="email-detail">
+      <div id="detail-placeholder">
+        <div class="big-icon">📭</div>
+        <p>Select an email to read</p>
+      </div>
+      <div id="detail-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let allEmails      = [];
+let filteredEmails = [];
+let selectedIndex  = -1;
+let userEmail      = "";
+let searchTimeout  = null;
+
+// ── Category colors ────────────────────────────────────────────
+const CAT_COLORS = [
+  "#1a73e8","#34a853","#ea4335","#fbbc04","#9c27b0",
+  "#00bcd4","#ff5722","#607d8b","#e91e63","#4caf50",
+];
+const catColorMap = {};
+
+function getCatColor(cat) {
+  if (!catColorMap[cat]) {
+    catColorMap[cat] = CAT_COLORS[Object.keys(catColorMap).length % CAT_COLORS.length];
+  }
+  return catColorMap[cat];
+}
+
+// Avatar color from sender name
+function avatarColor(name) {
+  let h = 0;
+  for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  const colors = ["#1a73e8","#34a853","#ea4335","#9c27b0","#ff5722","#00bcd4","#fbbc04"];
+  return colors[Math.abs(h) % colors.length];
+}
+
+function initials(sender) {
+  const name = sender.replace(/<.*>/, "").replace(/"/g, "").trim();
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (name[0] || "?").toUpperCase();
+}
+
+// ── Login ──────────────────────────────────────────────────────
+async function doLogin() {
+  const email    = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value.trim();
+  const errEl    = document.getElementById("login-error");
+  const btn      = document.getElementById("login-btn");
+
+  errEl.style.display = "none";
+  if (!email || !password) {
+    showError("Please enter your Gmail address and App Password."); return;
+  }
+
+  btn.textContent = "Connecting...";
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch("/api/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, password}),
+    });
+    const data = await res.json();
+
+    if (!res.ok) { showError(data.error || "Login failed."); btn.textContent = "Sign In"; btn.disabled = false; return; }
+
+    userEmail = email;
+    document.getElementById("user-avatar").textContent = email[0].toUpperCase();
+
+    // Show app
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("topbar").style.display = "flex";
+    document.getElementById("app").style.display = "flex";
+
+    // Load emails immediately (unclassified)
+    allEmails = data.emails;
+    filteredEmails = [...allEmails];
+    renderEmailList(filteredEmails);
+    updateSidebar();
+
+    // Start SSE to receive classification updates
+    startSSE();
+
+  } catch(e) {
+    showError("Network error. Is the server running?");
+    btn.textContent = "Sign In"; btn.disabled = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById("login-error");
+  el.textContent = "⚠️ " + msg;
+  el.style.display = "block";
+}
+
+// ── SSE — live classification updates ─────────────────────────
+function startSSE() {
+  const es = new EventSource("/api/stream");
+  const wrap = document.getElementById("progress-bar-wrap");
+  wrap.style.display = "flex";
+
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "classified") {
+      // Update this email in our list
+      const i = allEmails.findIndex(em => em.id === data.email.id);
+      if (i !== -1) {
+        allEmails[i] = data.email;
+        // Update in filtered list too
+        const fi = filteredEmails.findIndex(em => em.id === data.email.id);
+        if (fi !== -1) filteredEmails[fi] = data.email;
+      }
+
+      // Update progress bar
+      const pct = Math.round((data.index + 1) / data.total * 100);
+      document.getElementById("progress-fill").style.width = pct + "%";
+      document.getElementById("progress-text").textContent = `Classifying ${data.index+1}/${data.total}`;
+
+      // Re-render list item
+      updateEmailItem(data.email);
+      updateSidebar();
+    }
+
+    if (data.type === "done") {
+      wrap.style.display = "none";
+      updateSidebar();
+      es.close();
+    }
+  };
+}
+
+// ── Render email list ──────────────────────────────────────────
+function renderEmailList(emails) {
+  const el = document.getElementById("email-list");
+  document.getElementById("list-count").textContent = emails.length + " emails";
+
+  if (!emails.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#5f6368">No emails found</div>`;
+    return;
+  }
+
+  el.innerHTML = emails.map((em, i) => emailItemHTML(em, i)).join("");
+}
+
+function emailItemHTML(em, i) {
+  const color  = avatarColor(em.sender);
+  const init   = initials(em.sender);
+  const cat    = em.category || "...";
+  const catCol = getCatColor(cat);
+  const date   = formatDate(em.date);
+  const senderShort = em.sender.replace(/<.*>/, "").replace(/"/g, "").trim().split("@")[0];
+  const mediaIcons  = (em.has_attachments ? " 📎" : "") + (em.has_images ? " 🖼️" : "");
+  const calDot      = em.has_datetime ? `<span class="cal-dot" title="Contains dates/times"></span>` : "";
+
+  return `
+  <div class="email-item" id="item-${em.id}" onclick="selectEmail('${em.id}', ${i})">
+    <div class="email-avatar" style="background:${color}">${init}</div>
+    <div class="email-meta">
+      <div class="email-sender">${escHtml(senderShort)}</div>
+      <div class="email-subject">${escHtml(em.subject)}${mediaIcons}${calDot}</div>
+      <div class="email-snippet">${escHtml(em.snippet || "")}</div>
+    </div>
+    <div class="email-right">
+      <div class="email-date">${date}</div>
+      <div class="category-badge" style="background:${catCol}22;color:${catCol}">${escHtml(cat)}</div>
+    </div>
+  </div>`;
+}
+
+function updateEmailItem(em) {
+  const el = document.getElementById("item-" + em.id);
+  if (!el) return;
+  const cat    = em.category || "...";
+  const catCol = getCatColor(cat);
+  const badge  = el.querySelector(".category-badge");
+  if (badge) {
+    badge.textContent = cat;
+    badge.style.background = catCol + "22";
+    badge.style.color = catCol;
+  }
+  // If this email is open in detail, update its badge too
+  if (selectedIndex !== -1 && filteredEmails[selectedIndex]?.id === em.id) {
+    const db = document.querySelector(".detail-category-badge");
+    if (db) { db.textContent = cat; db.style.background = catCol + "22"; db.style.color = catCol; }
+  }
+}
+
+// ── Select + show email detail ─────────────────────────────────
+let currentEmailId    = null;
+let lightboxMediaType = null;
+let lightboxIndex     = null;
+
+function selectEmail(id, index) {
+  document.querySelectorAll(".email-item").forEach(el => el.classList.remove("selected"));
+  const item = document.getElementById("item-" + id);
+  if (item) { item.classList.add("selected", "read"); }
+
+  selectedIndex  = index;
+  currentEmailId = id;
+  const em = filteredEmails[index];
+  if (!em) return;
+
+  const color  = avatarColor(em.sender);
+  const init   = initials(em.sender);
+  const cat    = em.category || "Classifying...";
+  const catCol = getCatColor(cat);
+
+  document.getElementById("detail-placeholder").style.display = "none";
+  const dc = document.getElementById("detail-content");
+  dc.style.display = "block";
+  dc.innerHTML = `
+    <div class="detail-subject">${escHtml(em.subject)}</div>
+    <div class="detail-meta">
+      <div class="detail-avatar" style="background:${color}">${init}</div>
+      <div class="detail-sender-info">
+        <div class="detail-sender-name">${escHtml(em.sender.replace(/<.*>/, "").replace(/"/g,"").trim())}</div>
+        <div class="detail-sender-email">${escHtml(em.sender)}</div>
+      </div>
+      <div class="detail-date">${formatDate(em.date)}</div>
+      <div class="detail-category-badge" style="background:${catCol}22;color:${catCol}">${escHtml(cat)}</div>
+    </div>
+    <div class="detail-body">${escHtml(em.body || "(No content)")}</div>
+    <div id="datetime-panel"></div>
+    <div id="media-panel"></div>
+  `;
+
+  // Load datetime info
+  loadDateTimeCard(id);
+
+  // Always attempt to load media — cache may not have flags set
+  loadEmailMedia(id);
+}
+
+// ── Sidebar categories ─────────────────────────────────────────
+function updateSidebar() {
+  const counts = {};
+  for (const em of allEmails) {
+    const c = em.category || "Classifying...";
+    counts[c] = (counts[c] || 0) + 1;
+  }
+
+  document.getElementById("inbox-count").textContent = allEmails.length;
+
+  const nav = document.getElementById("category-nav");
+  nav.innerHTML = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, cnt]) => {
+      const col = getCatColor(cat);
+      return `
+      <div class="nav-item" onclick="filterByCategory('${escHtml(cat)}')">
+        <div class="cat-dot" style="background:${col}"></div>
+        ${escHtml(cat)}
+        <span class="nav-count">${cnt}</span>
+      </div>`;
+    }).join("");
+}
+
+// ── Filtering ──────────────────────────────────────────────────
+function showAll() {
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  document.querySelector(".nav-item").classList.add("active");
+  filteredEmails = [...allEmails];
+  document.getElementById("list-title").textContent = "Inbox";
+  renderEmailList(filteredEmails);
+}
+
+function filterByCategory(cat) {
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  filteredEmails = allEmails.filter(e => e.category === cat);
+  document.getElementById("list-title").textContent = cat;
+  renderEmailList(filteredEmails);
+}
+
+function onSearch(val) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    if (!val.trim()) { filteredEmails = [...allEmails]; renderEmailList(filteredEmails); return; }
+    const res  = await fetch(`/api/search?q=${encodeURIComponent(val)}`);
+    const data = await res.json();
+    filteredEmails = data.emails;
+    document.getElementById("list-title").textContent = `Search: "${val}"`;
+    renderEmailList(filteredEmails);
+  }, 350);
+}
+
+// ── DateTime extraction + card ─────────────────────────────────
+async function loadDateTimeCard(emailId) {
+  const panel = document.getElementById("datetime-panel");
+  if (!panel) return;
+  panel.innerHTML = `<div class="dt-loading">🔍 Scanning for dates & times...</div>`;
+
+  try {
+    const res  = await fetch(`/api/email/${emailId}/datetime`);
+    const data = await res.json();
+    renderDateTimeCard(panel, data, emailId);
+  } catch(e) {
+    panel.innerHTML = "";
+  }
+}
+
+function renderDateTimeCard(panel, dt, emailId) {
+  const hasData = dt.all_raw?.length > 0 || dt.has_scheduling_intent;
+  if (!hasData) { panel.innerHTML = ""; return; }
+
+  const intentEmoji = {
+    request_meeting:   "🤝",
+    share_availability:"📆",
+    confirm_meeting:   "✅",
+    event_registration:"🎫",
+    reminder:          "⏰",
+    other:             "📅",
+  };
+
+  let html = `<div class="datetime-card">
+    <div class="datetime-card-header">
+      📅 &nbsp;Date & Time Information
+    </div>
+    <div class="datetime-card-body">`;
+
+  // Intent (from Gemini)
+  const g = dt.gemini;
+  if (g?.intent) {
+    const emoji = intentEmoji[g.intent] || "📅";
+    html += `<div class="dt-row">
+      <div class="dt-label">Intent</div>
+      <div class="dt-value">
+        <span class="intent-badge">${emoji} ${g.intent.replace(/_/g," ")}</span>
+      </div>
+    </div>`;
+  }
+
+  // Event title suggestion
+  if (g?.event_title) {
+    html += `<div class="dt-row">
+      <div class="dt-label">Event</div>
+      <div class="dt-value" style="font-weight:600">${escHtml(g.event_title)}</div>
+    </div>`;
+  }
+
+  // Structured slots from Gemini
+  if (g?.slots?.length) {
+    html += `<div class="dt-row">
+      <div class="dt-label">Slots</div>
+      <div class="dt-value">`;
+    for (const s of g.slots) {
+      const neg = s.is_negative ? ' <span style="color:#c00;font-size:11px">(unavailable)</span>' : "";
+      html += `<div style="margin-bottom:4px">
+        📍 <strong>${escHtml(s.raw)}</strong>${neg}`;
+      if (s.date || s.start_time) {
+        const parts = [];
+        if (s.date) parts.push(s.date);
+        if (s.start_time) parts.push(s.start_time + (s.end_time ? ` – ${s.end_time}` : ""));
+        if (s.timezone) parts.push(s.timezone);
+        html += `<br><span style="font-size:11px;color:var(--muted);margin-left:16px">→ ${parts.join(" · ")}</span>`;
+      }
+      if (s.utc_normalized) {
+        html += `<br><span style="font-size:10px;color:var(--muted);margin-left:16px">UTC: ${s.utc_normalized}</span>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div></div>`;
+  } else if (dt.all_raw?.length) {
+    // Fallback: raw regex matches
+    html += `<div class="dt-row">
+      <div class="dt-label">Found</div>
+      <div class="dt-value">`;
+    for (const r of dt.dates_found || [])
+      html += `<span class="dt-tag date">📅 ${escHtml(r)}</span>`;
+    for (const r of dt.times_found || [])
+      html += `<span class="dt-tag time">🕐 ${escHtml(r)}</span>`;
+    for (const r of dt.relative_found || [])
+      html += `<span class="dt-tag rel">📆 ${escHtml(r)}</span>`;
+    for (const r of dt.time_ranges || [])
+      html += `<span class="dt-tag range">⏱ ${escHtml(r.start)} – ${escHtml(r.end)}</span>`;
+    html += `</div></div>`;
+  }
+
+  // Participants
+  if (g?.participants?.length) {
+    html += `<div class="dt-row">
+      <div class="dt-label">People</div>
+      <div class="dt-value">${g.participants.map(p => `<span class="dt-tag">👤 ${escHtml(p)}</span>`).join("")}</div>
+    </div>`;
+  }
+
+  // Location
+  if (g?.location) {
+    html += `<div class="dt-row">
+      <div class="dt-label">Location</div>
+      <div class="dt-value">📍 ${escHtml(g.location)}</div>
+    </div>`;
+  }
+
+  // Urgency
+  if (g?.urgency && g.urgency !== "null") {
+    html += `<div class="dt-row">
+      <div class="dt-label">Urgency</div>
+      <div class="dt-value">${escHtml(g.urgency.replace(/_/g," "))}</div>
+    </div>`;
+  }
+
+  // Notes / ambiguity
+  if (g?.notes) {
+    html += `<div class="dt-row">
+      <div class="dt-label">Notes</div>
+      <div class="dt-value" style="color:var(--muted);font-style:italic">${escHtml(g.notes)}</div>
+    </div>`;
+  }
+
+  // Action buttons
+  html += `<div style="margin-top:4px">
+    <button class="gcal-btn" onclick="openScheduler('${emailId}')">
+      🗓 Schedule Meeting
+    </button>
+    <button class="gcal-btn secondary" onclick="addToGoogleCalendar('${emailId}')">
+      📅 Quick Add to Calendar
+    </button>
+    <button class="gcal-btn secondary" onclick="copyCalendarData('${emailId}')">
+      📋 Copy Data
+    </button>
+  </div>`;
+
+  html += `</div></div>`;
+  panel.innerHTML = html;
+}
+
+// ── Google Calendar integration ────────────────────────────────
+function addToGoogleCalendar(emailId) {
+  const em = filteredEmails.find(e => e.id === emailId);
+  if (!em) return;
+
+  const dt  = em.datetime_info;
+  const g   = dt?.gemini;
+
+  // Build Google Calendar URL
+  const title    = g?.event_title || em.subject || "Meeting";
+  const slot     = g?.slots?.[0];
+  const location = g?.location || "";
+  const details  = `From email: ${em.subject}\nSender: ${em.sender}`;
+
+  let startDT = "";
+  let endDT   = "";
+
+  if (slot?.utc_normalized) {
+    // Format: 20260315T090000Z
+    startDT = slot.utc_normalized.replace(/[-:]/g, "").replace(".000", "").slice(0, 15) + "Z";
+    // Default 1-hour duration if no end time
+    const endSlot = g?.slots?.find(s => s.end_time);
+    if (endSlot?.utc_normalized) {
+      endDT = endSlot.utc_normalized.replace(/[-:]/g, "").replace(".000", "").slice(0, 15) + "Z";
+    } else {
+      // Add 1 hour
+      const start = new Date(slot.utc_normalized);
+      start.setHours(start.getHours() + 1);
+      endDT = start.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    }
+  }
+
+  const params = new URLSearchParams({
+    action:   "TEMPLATE",
+    text:     title,
+    details:  details,
+    location: location,
+  });
+
+  if (startDT && endDT) {
+    params.set("dates", `${startDT}/${endDT}`);
+  }
+
+  const url = `https://calendar.google.com/calendar/render?${params.toString()}`;
+  window.open(url, "_blank");
+}
+
+function copyCalendarData(emailId) {
+  const em = filteredEmails.find(e => e.id === emailId);
+  if (!em?.datetime_info) return;
+
+  const text = JSON.stringify(em.datetime_info, null, 2);
+  navigator.clipboard.writeText(text).then(() => {
+    alert("📋 Datetime data copied to clipboard (JSON)");
+  });
+}
+
+// ── Meeting Scheduler ──────────────────────────────────────────
+let schedulerEmailId   = null;
+let schedulerProposal  = null;
+let schedulerAttendees = [];
+let selectedSlot       = null;
+
+async function openScheduler(emailId) {
+  schedulerEmailId  = emailId;
+  schedulerProposal = null;
+  selectedSlot      = null;
+
+  document.getElementById("scheduler-modal").classList.add("open");
+
+  // Check calendar status first
+  const statusRes  = await fetch("/api/calendar/status");
+  const status     = await statusRes.json();
+
+  if (!status.ready) {
+    renderSchedulerSetup(status);
+    return;
+  }
+
+  // Pre-populate attendees from datetime info
+  const em = filteredEmails.find(e => e.id === emailId);
+  schedulerAttendees = [];
+  if (em?.datetime_info?.gemini?.participants) {
+    for (const p of em.datetime_info.gemini.participants) {
+      if (p.includes("@")) schedulerAttendees.push(p);
+    }
+  }
+
+  renderSchedulerForm();
+}
+
+function closeScheduler() {
+  document.getElementById("scheduler-modal").classList.remove("open");
+}
+
+function renderSchedulerSetup(status) {
+  const body = document.getElementById("scheduler-body");
+  body.innerHTML = `
+    <div style="text-align:center;padding:20px">
+      <div style="font-size:48px;margin-bottom:16px">📅</div>
+      <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Connect Google Calendar</h3>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">
+        ${escHtml(status.message)}
+      </p>
+      ${status.step === "not_installed" ? `
+        <div style="background:#fef7e0;border-radius:8px;padding:12px 16px;text-align:left;font-size:12px;font-family:monospace;margin-bottom:16px">
+          pip install google-auth google-auth-oauthlib<br>
+          google-auth-httplib2 google-api-python-client
+        </div>
+      ` : ""}
+      ${status.step === "needs_auth" || status.step === "auth_failed" ? `
+        <button class="gcal-btn" onclick="authorizeCalendar()">
+          🔑 Authorize Google Calendar
+        </button>
+      ` : ""}
+      <p style="font-size:11px;color:var(--muted);margin-top:16px">
+        Follow the setup steps in <code>calendar_service.py</code> to get credentials.json
+      </p>
+    </div>`;
+}
+
+async function authorizeCalendar() {
+  const body = document.getElementById("scheduler-body");
+  body.innerHTML = `<div class="modal-loading">🔑 Opening browser for Google sign-in...<br><small>Check your browser for a new tab</small></div>`;
+
+  const res  = await fetch("/api/calendar/auth");
+  const data = await res.json();
+
+  if (data.success) {
+    renderSchedulerForm();
+  } else {
+    body.innerHTML = `<div class="modal-loading" style="color:#c00">❌ ${escHtml(data.error)}</div>`;
+  }
+}
+
+function renderSchedulerForm() {
+  const em   = filteredEmails.find(e => e.id === schedulerEmailId);
+  const body = document.getElementById("scheduler-body");
+
+  body.innerHTML = `
+    <div class="modal-section">
+      <div class="modal-label">Meeting About</div>
+      <div style="font-size:14px;font-weight:600">${escHtml(em?.subject || "Meeting")}</div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Attendees</div>
+      <div class="attendee-list" id="attendee-list"></div>
+      <div class="add-attendee-row">
+        <input type="email" id="attendee-input" placeholder="Add email address..."
+               onkeydown="if(event.key==='Enter') addAttendee()"/>
+        <button class="add-btn" onclick="addAttendee()">Add</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Duration</div>
+      <select class="duration-select" id="duration-select">
+        <option value="30">30 minutes</option>
+        <option value="60" selected>1 hour</option>
+        <option value="90">1.5 hours</option>
+        <option value="120">2 hours</option>
+      </select>
+    </div>
+
+    <button class="gcal-btn" style="width:100%" onclick="findFreeSlots()">
+      🔍 Find Free Slots
+    </button>
+
+    <div id="slots-section" style="margin-top:20px"></div>
+  `;
+
+  renderAttendeeChips();
+}
+
+function renderAttendeeChips() {
+  const list = document.getElementById("attendee-list");
+  if (!list) return;
+  list.innerHTML = schedulerAttendees.map(email => `
+    <div class="attendee-chip">
+      👤 ${escHtml(email)}
+      <span class="remove" onclick="removeAttendee('${escHtml(email)}')">✕</span>
+    </div>`).join("");
+}
+
+function addAttendee() {
+  const input = document.getElementById("attendee-input");
+  const val   = input.value.trim().toLowerCase();
+  if (val && val.includes("@") && !schedulerAttendees.includes(val)) {
+    schedulerAttendees.push(val);
+    renderAttendeeChips();
+  }
+  input.value = "";
+  input.focus();
+}
+
+function removeAttendee(email) {
+  schedulerAttendees = schedulerAttendees.filter(e => e !== email);
+  renderAttendeeChips();
+}
+
+async function findFreeSlots() {
+  const duration   = parseInt(document.getElementById("duration-select").value);
+  const slotsDiv   = document.getElementById("slots-section");
+  slotsDiv.innerHTML = `<div class="modal-loading">⏳ Checking calendars for free slots...</div>`;
+
+  const res  = await fetch(`/api/calendar/schedule/${schedulerEmailId}`, {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({
+      duration_minutes: duration,
+      attendees:        schedulerAttendees.length ? schedulerAttendees : undefined,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (data.error) {
+    slotsDiv.innerHTML = `<div style="color:#c00;font-size:13px">❌ ${escHtml(data.error)}</div>`;
+    return;
+  }
+
+  schedulerProposal = data;
+  selectedSlot      = null;
+  renderSlots(data, slotsDiv);
+}
+
+function renderSlots(proposal, container) {
+  const slots = proposal.free_slots || [];
+
+  if (!slots.length) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">
+        😕 No free slots found in the next 7 days for all attendees.<br>
+        Try removing some attendees or reducing duration.
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="modal-label">Available Slots (${slots.length} found)</div>
+    <div class="slot-list">`;
+
+  for (let i = 0; i < slots.length; i++) {
+    const s       = slots[i];
+    const pref    = s.preferred ? `<span class="slot-badge">✨ Matches email</span>` : "";
+    const reason  = s.match_reason ? `<div class="slot-meta">${escHtml(s.match_reason)}</div>` : "";
+    html += `
+      <div class="slot-item ${s.preferred ? "preferred" : ""}" id="slot-${i}"
+           onclick="selectSlot(${i})">
+        <div>
+          <div class="slot-time">📅 ${escHtml(s.display)}</div>
+          <div class="slot-meta">${s.attendees_count} attendee(s) · ${s.duration_minutes} min</div>
+          ${reason}
+        </div>
+        ${pref}
+      </div>`;
+  }
+
+  html += `</div>
+    <button class="confirm-btn" id="confirm-btn" onclick="confirmMeeting()">
+      ✅ Create Meeting & Send Invites
+    </button>`;
+
+  container.innerHTML = html;
+}
+
+function selectSlot(index) {
+  // Deselect all
+  document.querySelectorAll(".slot-item").forEach(el => el.classList.remove("selected-slot"));
+  document.getElementById(`slot-${index}`).classList.add("selected-slot");
+  selectedSlot = schedulerProposal.free_slots[index];
+  document.getElementById("confirm-btn").style.display = "block";
+}
+
+async function confirmMeeting() {
+  if (!selectedSlot || !schedulerProposal) return;
+
+  const btn = document.getElementById("confirm-btn");
+  btn.textContent = "⏳ Creating event...";
+  btn.disabled    = true;
+
+  const res  = await fetch(`/api/calendar/confirm/${schedulerEmailId}`, {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({
+      slot:      selectedSlot,
+      attendees: schedulerAttendees.length ? schedulerAttendees : undefined,
+    }),
+  });
+
+  const data = await res.json();
+  renderConfirmResult(data);
+}
+
+function renderConfirmResult(data) {
+  const body = document.getElementById("scheduler-body");
+
+  if (data.duplicate) {
+    body.innerHTML = `
+      <div class="modal-success">
+        <div class="success-icon">⚠️</div>
+        <h3>Duplicate Detected</h3>
+        <p>${escHtml(data.message)}</p>
+        <button class="gcal-btn secondary" onclick="renderSchedulerForm()">← Try Different Slot</button>
+      </div>`;
+    return;
+  }
+
+  if (!data.success) {
+    body.innerHTML = `
+      <div class="modal-success">
+        <div class="success-icon">❌</div>
+        <h3>Creation Failed</h3>
+        <p style="color:#c00">${escHtml(data.error || "Unknown error")}</p>
+        <button class="gcal-btn secondary" onclick="renderSchedulerForm()">← Try Again</button>
+      </div>`;
+    return;
+  }
+
+  const ev = data.event;
+  body.innerHTML = `
+    <div class="modal-success">
+      <div class="success-icon">🎉</div>
+      <h3>Meeting Created!</h3>
+      <p><strong>${escHtml(ev.title)}</strong></p>
+      <p>${escHtml(ev.start?.slice(0,16).replace("T"," ") || "")} UTC</p>
+      <p>${ev.attendees?.length || 0} invite(s) sent</p>
+      ${ev.meet_link ? `<p><a href="${ev.meet_link}" target="_blank">🎥 Join Google Meet</a></p>` : ""}
+      ${ev.html_link ? `<p><a href="${ev.html_link}" target="_blank">📅 View in Calendar</a></p>` : ""}
+      <button class="gcal-btn" style="margin-top:12px" onclick="closeScheduler()">Done</button>
+    </div>`;
+}
+
+// ── Media loading + rendering ──────────────────────────────────
+async function loadEmailMedia(emailId) {
+  const panel = document.getElementById("media-panel");
+  if (!panel) return;
+
+  try {
+    const res  = await fetch(`/api/email/${emailId}/media`);
+    const data = await res.json();
+
+    const hasAnything = (data.attachments?.length || 0) +
+                        (data.inline_images?.length || 0) +
+                        (data.linked_images?.length || 0) > 0;
+
+    if (hasAnything) {
+      renderMediaPanel(panel, data);
+    } else {
+      panel.innerHTML = "";   // no media — show nothing, no spinner
+    }
+  } catch(e) {
+    panel.innerHTML = "";
+  }
+}
+
+function renderMediaPanel(panel, data) {
+  let html = "";
+
+  // ── Attachments ────────────────────────────────────────────
+  if (data.attachments && data.attachments.length > 0) {
+    html += `<div class="media-section">
+      <div class="media-section-title">📎 Attachments (${data.attachments.length})</div>
+      <div class="attachment-list">`;
+
+    for (const att of data.attachments) {
+      const icon = fileIcon(att.extension);
+      html += `
+        <div class="attachment-chip" onclick="downloadAttachment('${currentEmailId}', ${att.index})">
+          <span class="attachment-icon">${icon}</span>
+          <div class="attachment-info">
+            <div class="attachment-name" title="${escHtml(att.filename)}">${escHtml(att.filename)}</div>
+            <div class="attachment-size">${att.size_str} · ${att.extension.toUpperCase() || att.mime_type}</div>
+          </div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  // ── Inline images ──────────────────────────────────────────
+  if (data.inline_images && data.inline_images.length > 0) {
+    html += `<div class="media-section">
+      <div class="media-section-title">🖼️ Inline Images (${data.inline_images.length})</div>
+      <div class="image-grid">`;
+
+    for (const img of data.inline_images) {
+      html += imageThumbHTML(img.data_uri, "inline", img.index);
+    }
+    html += `</div></div>`;
+  }
+
+  // ── Linked images ──────────────────────────────────────────
+  if (data.linked_images && data.linked_images.length > 0) {
+    html += `<div class="media-section">
+      <div class="media-section-title">🔗 Images from Email (${data.linked_images.length})</div>
+      <div class="image-grid">`;
+
+    for (const img of data.linked_images) {
+      html += imageThumbHTML(img.data_uri, "linked", img.index);
+    }
+    html += `</div></div>`;
+  }
+
+  panel.innerHTML = html || "";
+}
+
+function imageThumbHTML(dataUri, mediaType, index) {
+  return `
+    <div class="image-thumb-wrap">
+      <img src="${dataUri}" loading="lazy" alt="Email image"/>
+      <div class="image-thumb-overlay">
+        <button class="img-btn" onclick="openLightbox('${dataUri}','${mediaType}',${index})">🔍 View</button>
+        <button class="img-btn" onclick="analyzeImage('${mediaType}',${index}, event)">🤖 AI</button>
+      </div>
+    </div>`;
+}
+
+// ── Attachment download ────────────────────────────────────────
+function downloadAttachment(emailId, index) {
+  window.open(`/api/email/${emailId}/attachment/${index}`, "_blank");
+}
+
+// ── Lightbox ───────────────────────────────────────────────────
+function openLightbox(dataUri, mediaType, index) {
+  document.getElementById("lightbox-img").src = dataUri;
+  document.getElementById("lightbox-result").style.display = "none";
+  document.getElementById("lightbox-result").textContent = "";
+  document.getElementById("lightbox").classList.add("open");
+  lightboxMediaType = mediaType;
+  lightboxIndex     = index;
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("open");
+  document.getElementById("lightbox-img").src = "";
+}
+
+async function analyzeCurrentImage() {
+  if (!lightboxMediaType || lightboxIndex === null) return;
+  await analyzeImage(lightboxMediaType, lightboxIndex, null, true);
+}
+
+async function analyzeImage(mediaType, index, event, inLightbox = false) {
+  if (event) event.stopPropagation();
+  if (!currentEmailId) return;
+
+  const resultEl = inLightbox
+    ? document.getElementById("lightbox-result")
+    : null;
+
+  if (resultEl) {
+    resultEl.style.display = "block";
+    resultEl.textContent = "🤖 Analyzing with Gemini...";
+  }
+
+  try {
+    const res  = await fetch(`/api/email/${currentEmailId}/analyze-media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: mediaType, index }),
+    });
+    const data = await res.json();
+
+    if (resultEl) {
+      resultEl.textContent = data.analysis || data.error || "No result";
+    }
+  } catch(e) {
+    if (resultEl) resultEl.textContent = "Analysis failed.";
+  }
+}
+
+// ── File type icons ────────────────────────────────────────────
+function fileIcon(ext) {
+  const map = {
+    pdf: "📄", doc: "📝", docx: "📝", xls: "📊", xlsx: "📊",
+    ppt: "📑", pptx: "📑", zip: "🗜️", rar: "🗜️", txt: "📃",
+    csv: "📊", jpg: "🖼️", jpeg: "🖼️", png: "🖼️", gif: "🖼️",
+    mp3: "🎵", mp4: "🎬", mov: "🎬", avi: "🎬",
+  };
+  return map[ext] || "📎";
+}
+
+// Close lightbox on background click
+document.getElementById("lightbox").addEventListener("click", function(e) {
+  if (e.target === this) closeLightbox();
+});
+function escHtml(s) {
+  return String(s || "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function formatDate(dateStr) {
+  if (!dateStr || dateStr === "Unknown") return "";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    }
+    return d.toLocaleDateString([], {month:"short", day:"numeric"});
+  } catch { return dateStr.slice(0,10); }
+}
+
+// Enter key on login
+document.getElementById("login-password").addEventListener("keydown", e => {
+  if (e.key === "Enter") doLogin();
+});
+document.getElementById("login-email").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("login-password").focus();
+});
+</script>
+</body>
+</html>
