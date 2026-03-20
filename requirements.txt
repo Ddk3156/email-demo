@@ -1,0 +1,4 @@
+# Only ONE external package needed — Gemini SDK
+# Gmail uses Python's built-in imaplib (no install required)
+
+google-generativeai
