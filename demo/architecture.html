@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MailMind — System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;
+  --surface:#111118;
+  --surface2:#18181f;
+  --border:#ffffff0f;
+  --border2:#ffffff1a;
+  --text:#e8e6f0;
+  --muted:#6b6882;
+  --accent:#7c6af7;
+  --accent2:#a78bfa;
+  --teal:#2dd4bf;
+  --amber:#fbbf24;
+  --coral:#f87171;
+  --green:#4ade80;
+  --blue:#60a5fa;
+  --pink:#f472b6;
+}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:0;
+  overflow-x:hidden;
+}
+
+/* bg grid */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(124,106,247,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(124,106,247,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+header{
+  width:100%;
+  padding:48px 40px 0;
+  text-align:center;
+  position:relative;
+  z-index:1;
+}
+
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;
+  background:rgba(124,106,247,.12);
+  border:1px solid rgba(124,106,247,.25);
+  border-radius:20px;
+  font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--accent2);font-weight:500;
+  margin-bottom:20px;
+}
+
+h1{
+  font-size:clamp(28px,4vw,44px);
+  font-weight:300;
+  letter-spacing:-1px;
+  line-height:1.15;
+  color:#fff;
+  margin-bottom:10px;
+}
+h1 span{color:var(--accent2);}
+
+.sub{
+  font-size:14px;color:var(--muted);
+  font-weight:300;letter-spacing:.3px;
+}
+
+/* main canvas */
+.canvas{
+  width:100%;max-width:1100px;
+  padding:48px 32px 32px;
+  position:relative;
+  z-index:1;
+}
+
+/* flow container */
+.flow{
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  position:relative;
+}
+
+/* ── email input row ── */
+.email-row{
+  display:flex;
+  justify-content:center;
+  margin-bottom:0;
+}
+
+.email-card{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:14px;
+  padding:18px 28px;
+  display:flex;align-items:center;gap:16px;
+  cursor:pointer;
+  transition:border-color .25s,transform .2s;
+  position:relative;
+}
+.email-card:hover{border-color:rgba(124,106,247,.5);transform:translateY(-2px);}
+
+.email-icon{
+  width:44px;height:44px;border-radius:10px;
+  background:rgba(124,106,247,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  flex-shrink:0;
+}
+
+.email-info{text-align:left;}
+.email-from{font-size:13px;font-weight:500;color:var(--text);}
+.email-subject{font-size:12px;color:var(--muted);}
+
+.new-badge{
+  position:absolute;top:-8px;right:12px;
+  background:var(--coral);
+  color:#fff;font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+  padding:2px 8px;border-radius:10px;
+}
+
+/* ── connector ── */
+.connector{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  height:52px;
+  justify-content:center;
+  position:relative;
+}
+
+.connector-line{
+  width:1.5px;
+  flex:1;
+  background:linear-gradient(to bottom,var(--border2),var(--accent));
+  position:relative;
+}
+
+.connector-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 10px rgba(124,106,247,.6);
+  flex-shrink:0;
+}
+
+.connector-label{
+  position:absolute;
+  right:calc(50% + 14px);
+  top:50%;transform:translateY(-50%);
+  font-size:10px;color:var(--muted);letter-spacing:.5px;
+  white-space:nowrap;font-family:'DM Mono',monospace;
+}
+
+/* ── classifier node ── */
+.classifier{
+  display:flex;justify-content:center;
+}
+
+.classifier-card{
+  background:linear-gradient(135deg,rgba(124,106,247,.12),rgba(45,212,191,.06));
+  border:1px solid rgba(124,106,247,.3);
+  border-radius:16px;
+  padding:20px 32px;
+  text-align:center;
+  min-width:280px;
+  position:relative;
+  cursor:pointer;
+  transition:border-color .25s,transform .2s;
+}
+.classifier-card:hover{border-color:rgba(124,106,247,.6);transform:translateY(-2px);}
+
+.tier-pills{
+  display:flex;gap:6px;justify-content:center;
+  margin-bottom:12px;
+}
+.tier-pill{
+  font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+  padding:2px 8px;border-radius:8px;
+  font-family:'DM Mono',monospace;
+}
+.tier-pill.t1{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2);}
+.tier-pill.t2{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2);}
+.tier-pill.t3{background:rgba(124,106,247,.1);color:var(--accent2);border:1px solid rgba(124,106,247,.2);}
+
+.classifier-title{font-size:16px;font-weight:500;color:#fff;margin-bottom:4px;}
+.classifier-sub{font-size:11px;color:var(--muted);}
+
+/* ── branch row ── */
+.branch-row{
+  display:flex;
+  align-items:flex-start;
+  gap:0;
+  position:relative;
+  margin-top:0;
+}
+
+.branch-line{
+  position:absolute;
+  top:0;
+  left:50%;
+  width:50%;
+  height:1.5px;
+  background:var(--border2);
+}
+.branch-line.left{
+  left:0;
+  width:50%;
+}
+
+/* ── branch connector ── */
+.branch-connectors{
+  position:relative;
+  height:60px;
+  width:100%;
+}
+.branch-connectors svg{
+  width:100%;height:100%;
+  overflow:visible;
+}
+
+/* ── branch cards ── */
+.branches{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+}
+
+.branch-card{
+  border-radius:16px;
+  padding:22px 24px;
+  cursor:pointer;
+  transition:transform .2s,border-color .25s;
+  position:relative;
+}
+.branch-card:hover{transform:translateY(-3px);}
+
+.branch-card.schedule{
+  background:linear-gradient(135deg,rgba(45,212,191,.08),rgba(96,165,250,.05));
+  border:1px solid rgba(45,212,191,.25);
+}
+.branch-card.schedule:hover{border-color:rgba(45,212,191,.5);}
+
+.branch-card.summarize{
+  background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(244,114,182,.05));
+  border:1px solid rgba(251,191,36,.25);
+}
+.branch-card.summarize:hover{border-color:rgba(251,191,36,.5);}
+
+.branch-icon{
+  font-size:22px;margin-bottom:10px;
+}
+.branch-title{font-size:15px;font-weight:500;color:#fff;margin-bottom:6px;}
+.branch-steps{list-style:none;}
+.branch-steps li{
+  font-size:11px;color:var(--muted);
+  padding:5px 0;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.branch-steps li:last-child{border-bottom:none;}
+.step-dot{
+  width:5px;height:5px;border-radius:50%;flex-shrink:0;
+}
+.schedule .step-dot{background:var(--teal);}
+.summarize .step-dot{background:var(--amber);}
+
+/* ── output row ── */
+.outputs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  margin-top:48px;
+}
+
+.output-card{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:16px 18px;
+  cursor:pointer;
+  transition:border-color .25s,transform .2s;
+}
+.output-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+
+.output-icon{font-size:18px;margin-bottom:8px;}
+.output-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;}
+.output-desc{font-size:10px;color:var(--muted);line-height:1.5;}
+
+/* ── info panel ── */
+#info-panel{
+  position:fixed;
+  right:32px;top:50%;transform:translateY(-50%);
+  width:260px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s,transform .3s;
+  z-index:100;
+}
+#info-panel.visible{
+  opacity:1;pointer-events:all;
+  transform:translateY(-50%) translateX(0);
+}
+
+.info-tag{
+  font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  color:var(--accent2);margin-bottom:8px;
+  font-family:'DM Mono',monospace;
+}
+.info-title{font-size:15px;font-weight:500;color:#fff;margin-bottom:8px;}
+.info-body{font-size:12px;color:var(--muted);line-height:1.7;}
+
+/* ── stat bar ── */
+.stat-bar{
+  display:flex;
+  gap:32px;
+  justify-content:center;
+  margin-top:40px;
+  padding:20px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+}
+.stat{text-align:center;}
+.stat-val{font-size:24px;font-weight:300;color:#fff;letter-spacing:-1px;}
+.stat-val span{color:var(--accent2);}
+.stat-label{font-size:10px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-top:2px;}
+
+/* ── animated email sim ── */
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(124,106,247,.4);}
+  50%{box-shadow:0 0 0 8px rgba(124,106,247,.0);}
+}
+@keyframes flowDot{
+  0%{top:0;opacity:1;}
+  100%{top:100%;opacity:0;}
+}
+
+.flow-particle{
+  position:absolute;
+  width:4px;height:4px;border-radius:50%;
+  background:var(--accent);
+  left:50%;transform:translateX(-50%);
+  animation:flowDot 1.2s ease-in infinite;
+  box-shadow:0 0 6px var(--accent);
+}
+
+footer{
+  padding:32px;
+  font-size:11px;
+  color:var(--muted);
+  text-align:center;
+  letter-spacing:.3px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">🤖 MailMind · System Architecture</div>
+  <h1>How an email becomes a <span>meeting</span></h1>
+  <p class="sub">Hover any node to explore · Click to learn more</p>
+</header>
+
+<div class="canvas">
+  <div class="flow">
+
+    <!-- Input email -->
+    <div class="email-row">
+      <div class="email-card" onclick="showInfo('inbox')">
+        <div class="new-badge">NEW</div>
+        <div class="email-icon">📧</div>
+        <div class="email-info">
+          <div class="email-from">alex@company.com → bot@mailmind.ai</div>
+          <div class="email-subject">"Can we set up a sync this week? I'm free Tue 3–5 PM or Thu morning"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connector 1 -->
+    <div class="connector">
+      <div class="connector-line">
+        <div class="flow-particle" style="animation-delay:0s"></div>
+        <div class="flow-particle" style="animation-delay:.4s"></div>
+        <div class="flow-particle" style="animation-delay:.8s"></div>
+      </div>
+      <div class="connector-dot"></div>
+      <div class="connector-label">IMAP IDLE push</div>
+    </div>
+
+    <!-- Classifier -->
+    <div class="classifier">
+      <div class="classifier-card" onclick="showInfo('classifier')">
+        <div class="tier-pills">
+          <span class="tier-pill t1">Rules</span>
+          <span class="tier-pill t2">spaCy NLP</span>
+          <span class="tier-pill t3">Gemini</span>
+        </div>
+        <div class="classifier-title">Intent Classifier</div>
+        <div class="classifier-sub">Tiered pipeline · API called only for ambiguous cases</div>
+      </div>
+    </div>
+
+    <!-- Branch connectors SVG -->
+    <div style="position:relative;height:64px;width:100%;">
+      <svg width="100%" height="64" viewBox="0 0 700 64" preserveAspectRatio="none" style="position:absolute;inset:0;">
+        <line x1="350" y1="0" x2="350" y2="32" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>
+        <line x1="175" y1="32" x2="525" y2="32" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>
+        <line x1="175" y1="32" x2="175" y2="64" stroke="rgba(45,212,191,.4)" stroke-width="1.5"/>
+        <line x1="525" y1="32" x2="525" y2="64" stroke="rgba(251,191,36,.4)" stroke-width="1.5"/>
+        <circle cx="175" cy="32" r="3" fill="#2dd4bf"/>
+        <circle cx="525" cy="32" r="3" fill="#fbbf24"/>
+        <text x="268" y="26" fill="rgba(255,255,255,.25)" font-size="9" font-family="DM Mono" letter-spacing="1">SCHEDULING REQUEST</text>
+        <text x="418" y="26" fill="rgba(255,255,255,.25)" font-size="9" font-family="DM Mono" letter-spacing="1">STATUS REQUEST</text>
+      </svg>
+    </div>
+
+    <!-- Two branches -->
+    <div class="branches">
+
+      <!-- Schedule branch -->
+      <div class="branch-card schedule" onclick="showInfo('scheduler')">
+        <div class="branch-icon">🗓</div>
+        <div class="branch-title">Meeting Scheduler</div>
+        <ul class="branch-steps">
+          <li><span class="step-dot"></span>Extract time slots via spaCy + dateparser</li>
+          <li><span class="step-dot"></span>Email each participant for availability</li>
+          <li><span class="step-dot"></span>Collect replies asynchronously (SQLite state)</li>
+          <li><span class="step-dot"></span>Find overlapping free slots (Free/Busy API)</li>
+          <li><span class="step-dot"></span>Rank slots by email context match ✨</li>
+          <li><span class="step-dot"></span>Create Calendar event + Meet link</li>
+          <li><span class="step-dot"></span>Send confirmation to all participants</li>
+        </ul>
+      </div>
+
+      <!-- Summarize branch -->
+      <div class="branch-card summarize" onclick="showInfo('summarizer')">
+        <div class="branch-icon">📋</div>
+        <div class="branch-title">Thread Summarizer</div>
+        <ul class="branch-steps">
+          <li><span class="step-dot"></span>Fetch entire thread via Gmail API</li>
+          <li><span class="step-dot"></span>Strip quoted/forwarded text (dedup)</li>
+          <li><span class="step-dot"></span>TextRank extractive pass (fast, free)</li>
+          <li><span class="step-dot"></span>Gemini abstractive summary (long threads)</li>
+          <li><span class="step-dot"></span>Extract: status · decisions · action items</li>
+          <li><span class="step-dot"></span>Reply with structured summary</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Outputs -->
+    <div class="outputs">
+      <div class="output-card" onclick="showInfo('calendar')">
+        <div class="output-icon">📅</div>
+        <div class="output-title">Google Calendar Event</div>
+        <div class="output-desc">Created with Meet link · Invites sent to all attendees · Duplicate check passed</div>
+      </div>
+      <div class="output-card" onclick="showInfo('email-out')">
+        <div class="output-icon">✉️</div>
+        <div class="output-title">Confirmation Email</div>
+        <div class="output-desc">Sent by bot · Contains slot details · AI disclaimer footer on every message</div>
+      </div>
+      <div class="output-card" onclick="showInfo('summary-out')">
+        <div class="output-icon">📄</div>
+        <div class="output-title">Thread Summary</div>
+        <div class="output-desc">Status · Key decisions · Open action items · Who needs to act</div>
+      </div>
+    </div>
+
+    <!-- Stat bar -->
+    <div class="stat-bar">
+      <div class="stat">
+        <div class="stat-val"><span>~75%</span></div>
+        <div class="stat-label">Gemini calls saved</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><span>0</span></div>
+        <div class="stat-label">Human interventions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><span>3</span></div>
+        <div class="stat-label">Processing tiers</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><span>∞</span></div>
+        <div class="stat-label">Participants supported</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Info panel -->
+<div id="info-panel">
+  <div class="info-tag" id="info-tag">System</div>
+  <div class="info-title" id="info-title">—</div>
+  <div class="info-body" id="info-body">—</div>
+</div>
+
+<footer>PS-03 · INSPIRON 5.0 · CSI COEP Tech Student Chapter</footer>
+
+<script>
+const INFO = {
+  inbox:{
+    tag:'Email Input',
+    title:'Bot inbox monitoring',
+    body:'The bot email address monitors its inbox via IMAP IDLE — a push protocol that delivers emails instantly without polling. No manual trigger needed. Every incoming email is intercepted and sent through the pipeline automatically.'
+  },
+  classifier:{
+    tag:'Tier 1 → 2 → 3',
+    title:'Tiered intent classification',
+    body:'Tier 1: regex keyword rules handle ~60% instantly with zero API cost. Tier 2: spaCy NLP dependency parsing handles ~25%. Tier 3: Gemini only fires for the remaining ~15% of genuinely ambiguous emails. This reduces API cost by ~75%.'
+  },
+  scheduler:{
+    tag:'Core Feature',
+    title:'Async state machine scheduler',
+    body:'The scheduler doesn\'t just fire emails and wait. It persists state in SQLite — tracking which participants have replied, collecting availability asynchronously over hours, then finding overlapping free slots across all calendars via Google\'s Free/Busy API.'
+  },
+  summarizer:{
+    tag:'Core Feature',
+    title:'Two-pass thread summarizer',
+    body:'Fast path: TextRank extracts the most important sentences in milliseconds with zero API calls. Quality path: Gemini writes an abstractive summary only for long, complex threads. Every summary extracts status, decisions made, and open action items.'
+  },
+  calendar:{
+    tag:'Output',
+    title:'Conflict-free Calendar event',
+    body:'Before creating any event, the system queries Google Calendar for existing events at the proposed time — preventing duplicate bookings. A Google Meet link is automatically generated and included in the invite.'
+  },
+  'email-out':{
+    tag:'Output',
+    title:'AI-disclosed confirmation',
+    body:'Every outbound email from the bot carries a mandatory footer: "This email was sent by an AI assistant." This is a hard requirement that cannot be bypassed — every message, without exception.'
+  },
+  'summary-out':{
+    tag:'Output',
+    title:'Structured thread summary',
+    body:'Not just a paragraph — the summary is structured into three sections: current status, key decisions made, and open action items with owners. This format is immediately actionable without the recipient reading the original thread.'
+  }
+};
+
+function showInfo(key){
+  const d = INFO[key];
+  if(!d)return;
+  document.getElementById('info-tag').textContent = d.tag;
+  document.getElementById('info-title').textContent = d.title;
+  document.getElementById('info-body').textContent = d.body;
+  document.getElementById('info-panel').classList.add('visible');
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('[onclick]') && !e.target.closest('#info-panel')){
+    document.getElementById('info-panel').classList.remove('visible');
+  }
+});
+</script>
+</body>
+</html>
