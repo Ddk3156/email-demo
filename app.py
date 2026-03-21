@@ -15,7 +15,7 @@ import time
 logging.basicConfig(level=logging.WARNING)
 
 # ── Paste your Gemini API key here ────────────────────────────
-GEMINI_API_KEY = "AIzaSyDYyCuDT--Th9eZMpWs6Iw3kyrzikaAeV4"
+GEMINI_API_KEY = "api"
 # ─────────────────────────────────────────────────────────────
 
 from gmail_service      import connect_gmail, fetch_emails, fetch_linked_images
