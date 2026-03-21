@@ -21,7 +21,7 @@ import logging
 # ─────────────────────────────────────────────────────────────────────────────
 #  🔑  PASTE YOUR GEMINI API KEY HERE
 # ─────────────────────────────────────────────────────────────────────────────
-GEMINI_API_KEY = "AIzaSyDYyCuDT--Th9eZMpWs6Iw3kyrzikaAeV4"
+GEMINI_API_KEY = "api"
 # ─────────────────────────────────────────────────────────────────────────────
 
 MAX_EMAILS = 30    # How many emails to fetch in Browse mode
